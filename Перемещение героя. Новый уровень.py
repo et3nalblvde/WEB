@@ -68,6 +68,26 @@ def generate_level(level_data):
     return new_player
 
 
+class Camera:
+    def __init__(self, width, height):
+        self.camera = pygame.Rect(0, 0, width, height)
+        self.width = width
+        self.height = height
+
+    def apply(self, entity):
+        return entity.rect.move(self.camera.topleft)
+
+    def update(self, target):
+        x = -target.rect.centerx + int(width / 2)
+        y = -target.rect.centery + int(height / 2)
+
+        x = min(0, x)
+        y = min(0, y)
+        x = max(-(self.width - width), x)
+        y = max(-(self.height - height), y)
+        self.camera = pygame.Rect(x, y, self.width, self.height)
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, x, y):
         super().__init__(tiles)
@@ -86,18 +106,20 @@ class Player(pygame.sprite.Sprite):
 
     def move(self, direction):
         x, y = self.position
-        if direction == 'up' and y > 0 and level_map[y - 1][x] == '.':
-            self.position = (x, y - 1)
-        elif direction == 'down' and y < len(level_map) - 1 and level_map[y + 1][x] == '.':
-            self.position = (x, y + 1)
-        elif direction == 'left' and x > 0 and level_map[y][x - 1] == '.':
-            self.position = (x - 1, y)
-        elif direction == 'right' and x < len(level_map[y]) - 1 and level_map[y][x + 1] == '.':
-            self.position = (x + 1, y)
+        if direction == 'up':
+            y = (y - 1) % len(level_map)
+        elif direction == 'down':
+            y = (y + 1) % len(level_map)
+        elif direction == 'left':
+            x = (x - 1) % len(level_map[0])
+        elif direction == 'right':
+            x = (x + 1) % len(level_map[0])
+        self.position = (x, y)
         self.rect.topleft = (self.position[0] * tile_size + 15, self.position[1] * tile_size + 5)
 
 
 def game_loop():
+    camera = Camera(len(level_map[0]) * tile_size, len(level_map) * tile_size)
     running = True
     while running:
         for event in pygame.event.get():
@@ -114,8 +136,10 @@ def game_loop():
                     hero.move('right')
 
         screen.fill(pygame.Color('white'))
-        tiles.draw(screen)
-        players.draw(screen)
+        for tile in tiles:
+            screen.blit(tile.image, camera.apply(tile))
+        screen.blit(hero.image, camera.apply(hero))
+        camera.update(hero)
         pygame.display.flip()
 
 
